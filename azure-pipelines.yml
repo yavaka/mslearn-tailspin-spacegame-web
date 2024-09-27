@@ -1,12 +1,49 @@
 trigger:
--main
+- '*'
+
 pool:
   vmImage: ubuntu-latest
 
 variables:
   buildConfiguration: 'Release'
 
+# maps to the dotnet to restore/install project dependencies
 steps:
--script: dotnet build --configuration $(buildConfiguration)
-  displayName: 'dotnet build $(buildConfiguration)'
-  
+- task: UseDotNet@2 
+  displayName: 'Use .NET SDK 6.x'
+  inputs:
+    packageType: sdk
+    version: '6.x'
+
+- task: Npm@1
+  displayName: 'Run npm install'
+  inputs:
+    verbose: false
+
+- script: './node_modules/.bin/node-sass Tailspin.SpaceGame.Web/wwwroot --output Tailspin.SpaceGame.Web/wwwroot'
+  displayName: 'Compile Sass assets'
+
+- task: gulp@1
+  displayName: 'Run gulp tasks'
+
+# writes information about the build to a file
+# $(Build.DefinitionName) is the name of the build pipeline. For example, "SpaceGame-Web-CI."
+# $(Build.BuildId) is a numeric identifier for the completed build, like 115.
+# $(Build.BuildNumber) is the name of the completed build. You can configure the format, but by default, the
+- script: 'echo "$(Build.DefinitionName), $(Build.BuildId), $(Build.BuildNumber)" > buildinfo.txt'
+  displayName: 'Write build info'
+  workingDirectory: Tailspin.SpaceGame.Web/wwwroot
+
+- task: DotNetCoreCLI@2
+  displayName: 'Restore project dependencies'
+  inputs:
+    command: 'restore'
+    projects: '**/*.csproj'
+
+# maps to the dotnet to
+- task: DotNetCoreCLI@2
+  displayName: 'Build the project - Release'
+  inputs:
+    command: 'build'
+    arguments: '--no-restore --configuration Release'
+    projects: '**/*.csproj'
