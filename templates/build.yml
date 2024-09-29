@@ -1,19 +1,39 @@
 parameters:
-  buildConfiguration: 'Release'
+  buildConfiguration: Release
 
 steps:
-- task: DotNetCoreCLI@2
-  displayName: 'Build the project - ${{ parameters.buildConfiguration }}'
-  inputs:
-    command: 'build'
-    arguments: '--no-restore --configuration ${{ parameters.buildConfiguration }}'
-    projects: '**/*.csproj'
+  - task: DotNetCoreCLI@2
+    displayName: Build the project - ${{ parameters.buildConfiguration }}
+    inputs:
+      command: build
+      arguments: '--no-restore --configuration ${{ parameters.buildConfiguration }}'
+      projects: '**/*.csproj'
 
-- task: DotNetCoreCLI@2
-  displayName: 'Publish the project - ${{ parameters.buildConfiguration }}'
-  inputs:
-    command: 'publish'
-    projects: '**/*.csproj'
-    publishWebProjects: false
-    arguments: '--no-build --configuration ${{ parameters.buildConfiguration }} --output $(Build.ArtifactStagingDirectory)/${{ parameters.buildConfiguration }}'
-    zipAfterPublish: true
+  - task: DotNetCoreCLI@2
+    displayName: Publish the project - ${{ parameters.buildConfiguration }}
+    inputs:
+      command: publish
+      projects: '**/*.csproj'
+      publishWebProjects: false
+      arguments: '--no-build --configuration ${{ parameters.buildConfiguration }}
+        --output $(Build.ArtifactStagingDirectory)/${{
+        parameters.buildConfiguration }}'
+      zipAfterPublish: true
+Transform: AWS::Serverless-2016-10-31
+Resources:
+  Api:
+    Type: AWS::Serverless::Api
+    Properties:
+      Name: !Sub
+        - ${ResourceName} From Stack ${AWS::StackName}
+        - ResourceName: Api
+      StageName: Prod
+      DefinitionBody:
+        openapi: '3.0'
+        info: {}
+        paths:
+          /:
+            get:
+              responses: {}
+      EndpointConfiguration: REGIONAL
+      TracingEnabled: true
